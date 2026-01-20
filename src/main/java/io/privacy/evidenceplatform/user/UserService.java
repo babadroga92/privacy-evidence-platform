@@ -19,7 +19,7 @@ public class UserService {
         String normalizedEmail = normalizeEmail(email);
 
         if(userRepository.existsByEmail(normalizedEmail)){
-            throw new IllegalArgumentException("Email is already registered");
+            throw new EmailAlreadyRegisteredException(normalizedEmail);
         }
 
         AppUser user = new AppUser(
@@ -37,7 +37,7 @@ public class UserService {
         String normalizedEmail = normalizeEmail(email);
 
         return userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(normalizedEmail));
     }
 
     private String normalizeEmail(String email) {
