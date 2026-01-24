@@ -41,6 +41,14 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/login")
+    public LoginResponse login(@Valid @RequestBody LoginRequest request){
+        AppUser user = userService.authenticate(request.getEmail(), request.getPassword());
+
+        // Return safe response
+        return new LoginResponse(user.getId(), user.getEmail(), user.getUserRole().name());
+    }
+
     private UserRole parseRoleOrDefault(String rawRole) {
         if (rawRole == null || rawRole.isBlank()) {
             return UserRole.ENGINEER;

@@ -1,6 +1,7 @@
 package io.privacy.evidenceplatform.api;
 
 
+import io.privacy.evidenceplatform.auth.InvalidCredentialsException;
 import io.privacy.evidenceplatform.user.EmailAlreadyRegisteredException;
 import io.privacy.evidenceplatform.user.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,6 +54,14 @@ public class GlobalException {
     ) {
         // Avoid leaking internals
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", request.getRequestURI());
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(
+            InvalidCredentialsException ex,
+            HttpServletRequest request
+    ){
+      return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
     }
 
     private ResponseEntity<ApiError> buildError(HttpStatus status, String message, String path) {

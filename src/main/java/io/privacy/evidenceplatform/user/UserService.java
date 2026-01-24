@@ -1,6 +1,8 @@
 package io.privacy.evidenceplatform.user;
 
 
+import io.privacy.evidenceplatform.auth.InvalidCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,8 +12,10 @@ import java.time.OffsetDateTime;
 public class UserService {
 
     private final AppUserRepository userRepository;
-    public UserService(AppUserRepository userRepository) {
+    private final PasswordEncoder passwordEncoder;
+    public UserService(AppUserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -38,6 +42,21 @@ public class UserService {
 
         return userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new UserNotFoundException(normalizedEmail));
+    }
+
+    @Transactional(readOnly = true)
+    public AppUser authenticate(String email, String rawPassword) {
+        String normalizedEmail = normalizeEmail(email);
+
+        AppUser user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        boolean matches = passwordEncoder.matches(rawPassword, user.getPasswordHash());
+        if(!matches){
+            throw new InvalidCredentialsException();
+        }
+
+        return user;
     }
 
     private String normalizeEmail(String email) {
