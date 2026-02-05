@@ -17,3 +17,8 @@ spring:
 
   flyway:
     enabled: true
+
+# JWT (use env JWT_SECRET in production)
+jwt:
+  secret: ${JWT_SECRET:devSecretChangeInProductionMin32CharsLong}
+  expiration-ms: 86400000  # 24 hours

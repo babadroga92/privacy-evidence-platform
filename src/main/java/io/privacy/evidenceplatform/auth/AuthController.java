@@ -1,6 +1,5 @@
 package io.privacy.evidenceplatform.auth;
 
-
 import io.privacy.evidenceplatform.audit.AuditService;
 import io.privacy.evidenceplatform.user.AppUser;
 import io.privacy.evidenceplatform.user.UserRole;
@@ -8,6 +7,7 @@ import io.privacy.evidenceplatform.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,11 +18,14 @@ public class AuthController {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final JwtService jwtService;
 
-    public AuthController(UserService userService, PasswordEncoder passwordEncoder, AuditService auditService) {
+    public AuthController(UserService userService, PasswordEncoder passwordEncoder,
+                          AuditService auditService, JwtService jwtService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/register")
@@ -57,8 +60,8 @@ public class AuthController {
             // success audit
             auditService.logLoginAttempt(user.getId(), user.getEmail(), true, ip, userAgent);
 
-            // Return safe response
-            return new LoginResponse(user.getId(), user.getEmail(), user.getUserRole().name());
+            String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getUserRole());
+            return new LoginResponse(user.getId(), user.getEmail(), user.getUserRole().name(), token);
 
         } catch (InvalidCredentialsException ex) {
             auditService.logLoginAttempt(null, request.getEmail(), false, ip, userAgent);
@@ -66,10 +69,23 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/me")
+    public LoginResponse me(@AuthenticationPrincipal JwtPrincipal principal) {
+        if (principal == null) {
+            throw new InvalidCredentialsException("Not authenticated");
+        }
+        return new LoginResponse(
+                principal.userId(),
+                principal.email(),
+                principal.role().name(),
+                null  // Don't re-expose token on every /me call
+        );
+    }
+
     private UserRole parseRoleOrDefault(String rawRole) {
         if (rawRole == null || rawRole.isBlank()) {
             return UserRole.ENGINEER;
         }
-        return  UserRole.valueOf(rawRole.trim().toUpperCase());
+        return UserRole.valueOf(rawRole.trim().toUpperCase());
     }
 }
